@@ -10,7 +10,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Model;
 
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -27,6 +27,7 @@ class User extends Authenticatable
         'coverImage',
         'username',
         'password',
+        'email_verified_at'
     ];
 
     /**

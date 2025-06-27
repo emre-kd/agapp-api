@@ -24,9 +24,14 @@ use App\Http\Controllers\CommunityController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/verify-registration', [AuthController::class, 'verifyRegistration']);
+Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
+
+
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
+
 
     Route::put('/updateUser', [AuthController::class, 'updateUser']);
     Route::get('/getUser', [AuthController::class, 'getUser']);

@@ -52,7 +52,7 @@ class StoreUserRequest extends FormRequest
             'username.regex' => 'Kullanıcı adı boşluk veya boşluk karakterleri içeremez.',
             'username.max' => 'Kullanıcı adı en fazla 20 karakter olabilir.',
 
-             'community_code.exists' => 'Böyle bir topluluk bulunamadı.',
+            'community_code.exists' => 'Böyle bir topluluk bulunamadı.',
 
         ];
     }

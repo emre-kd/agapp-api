@@ -10,81 +10,45 @@ use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\StoreUserRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\VerificationEmail;
+use Illuminate\Support\Facades\Cache;
+
 
 
 
 class AuthController extends Controller
 {
 
-    public function register(StoreUserRequest $request)
-    {
-        $validated = $request->validated();
+    public function register(StoreUserRequest $request){
+       $validated = $request->validated();
 
-        // Varsayılan olarak null
-        $communityId = null;
+    // Generate a 6-digit verification code
+    $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        // Eğer community_code varsa, var olan topluluğu bul
-        if (!empty($request['community_code'])) {
-            $community = Community::where('code', $validated['community_code'])->first();
+    // Store verification data in cache
+    $registrationData = [
+        'username' => $validated['username'],
+        'email' => $validated['email'],
+        'password' => $validated['password'],
+        'community_code' => $request->community_code ?? null,
+        'community_name' => $request->community_name ?? null,
+        'verification_code' => $verificationCode,
+        'created_at' => now(),
+    ];
 
-            // Topluluk bulunamazsa validation hatası
-            if (!$community) {
-                return response()->json(['message' => 'Topluluk bulunamadı.'], 422);
-            }
+    // Store in cache (expires in 15 minutes)
+    $cacheKey = 'reg_verification:'.$validated['email'];
+    Cache::put($cacheKey, $registrationData, now()->addMinutes(15));
 
-            $communityId = $community->id;
+    // Send verification email
+    Mail::to($validated['email'])->send(new VerificationEmail($verificationCode));
 
-        // Eğer community_name varsa, yeni topluluk oluştur
-        } elseif (!empty($request->community_name)) {
-            // Generate a 6-character unique code
-            $uniqueCode = null;
-            do {
-                $uniqueCode = Str::upper(Str::random(6)); // Generate 6-character random code (uppercase)
-            } while (Community::where('code', $uniqueCode)->exists()); // Check if code already exists
-
-            // Kullanıcıyı önce oluştur, çünkü user_id gerekiyor
-            $user = User::create([
-                'name' => 'Agalık' . rand(10000, 99999),
-                'email' => $validated['email'],
-                'username' => $validated['username'],
-                'password' => Hash::make($validated['password']),
-            ]);
-
-            // Yeni topluluğu oluştur ve user_id'yi ekle
-            $newCommunity = Community::create([
-                'name' => $request->community_name,
-                'code' => $uniqueCode,
-                'user_id' => $user->id, // Store the ID of the user who created the community
-            ]);
-
-            $communityId = $newCommunity->id;
-
-            // Kullanıcıya community_id'yi ekle
-            $user->update(['community_id' => $communityId]);
-        } else {
-            return response()->json(['message' => 'Topluluk bilgisi eksik.'], 422);
-        }
-
-        // Eğer topluluğa katılınıyorsa, kullanıcıyı oluştur
-        if (!isset($user)) {
-            $user = User::create([
-                'name' => 'Agalık' . rand(10000, 99999),
-                'email' => $validated['email'],
-                'username' => $validated['username'],
-                'community_id' => $communityId,
-                'password' => Hash::make($validated['password']),
-            ]);
-        }
-
-        // Token oluştur
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'token' => $token,
-            'user' => $user,
-        ], 201);
+    return response()->json([
+        'message' => 'Verification code sent to your email',
+        'requires_verification' => true,
+    ], 200);
     }
-
 
     public function login(Request $request){
 
@@ -268,5 +232,99 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 
+    public function verifyRegistration(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|digits:6',
+            'email' => 'required|email',
+        ]);
+
+        $cacheKey = 'reg_verification:'.$request->email;
+        $pendingRegistration = Cache::get($cacheKey);
+
+        // Add proper null checks
+        if (!$pendingRegistration || !isset($pendingRegistration['verification_code'])) {
+            return response()->json([
+                'message' => 'Verification session expired or invalid. Please register again.'
+            ], 422);
+        }
+
+        if ($request->code !== $pendingRegistration['verification_code']) {
+            return response()->json([
+                'message' => 'Invalid verification code'
+            ], 422);
+        }
+
+        // Proceed with registration
+        $communityId = null;
+
+        if (!empty($pendingRegistration['community_code'])) {
+            $community = Community::where('code', $pendingRegistration['community_code'])->first();
+            if (!$community) {
+                return response()->json(['message' => 'Community not found'], 422);
+            }
+            $communityId = $community->id;
+        } elseif (!empty($pendingRegistration['community_name'])) {
+            $uniqueCode = Str::upper(Str::random(6));
+            $newCommunity = Community::create([
+                'name' => $pendingRegistration['community_name'],
+                'code' => $uniqueCode,
+                'user_id' => null, // Will update after user creation
+            ]);
+            $communityId = $newCommunity->id;
+        }
+
+        // Create user
+        $user = User::create([
+            'name' => 'Agalık' . rand(1000, 9999),
+            'email' => $pendingRegistration['email'],
+            'username' => $pendingRegistration['username'],
+            'community_id' => $communityId,
+            'password' => Hash::make($pendingRegistration['password']),
+            'email_verified_at' => now(),
+        ]);
+
+        // If new community, update creator
+        if (!empty($pendingRegistration['community_name'])) {
+            $newCommunity->update(['user_id' => $user->id]);
+        }
+
+        // Clear cache
+        Cache::forget($cacheKey);
+
+        // Create token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'user' => $user,
+        ], 201);
+    }
+
+    public function resendVerification(Request $request)
+    {
+
+    $request->validate([
+        'email' => 'required|email',
+    ]);
+
+    $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+    $cacheKey = 'reg_verification:' . $request->email;
+
+    // Kullanıcı doğrulama verisi geçici olarak cache'e kaydedilir
+    Cache::put($cacheKey, [
+        'email' => $request->email,
+        'verification_code' => $verificationCode,
+        // Ek olarak username, password, community vs. de koyabilirsin
+    ], now()->addMinutes(15));
+
+    // Doğrulama e-postası gönder
+    Mail::to($request->email)->send(new VerificationEmail($verificationCode));
+
+    return response()->json([
+        'message' => 'Doğrulama kodu e-posta adresinize gönderildi.',
+    ], 200);
+    }
 
 }
