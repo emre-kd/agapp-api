@@ -21,33 +21,33 @@ class AuthController extends Controller
 {
 
     public function register(StoreUserRequest $request){
-       $validated = $request->validated();
+        $validated = $request->validated();
 
-    // Generate a 6-digit verification code
-    $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        // Generate a 6-digit verification code
+        $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-    // Store verification data in cache
-    $registrationData = [
-        'username' => $validated['username'],
-        'email' => $validated['email'],
-        'password' => $validated['password'],
-        'community_code' => $request->community_code ?? null,
-        'community_name' => $request->community_name ?? null,
-        'verification_code' => $verificationCode,
-        'created_at' => now(),
-    ];
+        // Store verification data in cache
+        $registrationData = [
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+            'community_code' => $request->community_code ?? null,
+            'community_name' => $request->community_name ?? null,
+            'verification_code' => $verificationCode,
+            'created_at' => now(),
+        ];
 
-    // Store in cache (expires in 15 minutes)
-    $cacheKey = 'reg_verification:'.$validated['email'];
-    Cache::put($cacheKey, $registrationData, now()->addMinutes(15));
+        // Store in cache (expires in 15 minutes)
+        $cacheKey = 'reg_verification:'.$validated['email'];
+        Cache::put($cacheKey, $registrationData, now()->addMinutes(15));
 
-    // Send verification email
-    Mail::to($validated['email'])->send(new VerificationEmail($verificationCode));
+        // Send verification email
+        Mail::to($validated['email'])->send(new VerificationEmail($verificationCode));
 
-    return response()->json([
-        'message' => 'Verification code sent to your email',
-        'requires_verification' => true,
-    ], 200);
+        return response()->json([
+            'message' => 'Doğrulama kodu e-postanıza gönderildi',
+            'requires_verification' => true,
+        ], 200);
     }
 
     public function login(Request $request){
@@ -237,6 +237,10 @@ class AuthController extends Controller
         $request->validate([
             'code' => 'required|digits:6',
             'email' => 'required|email',
+        ], [
+            'code.required' => 'Doğrulama kodu boş olamaz.',
+            'code.digits' => 'Doğrulama kodunun 6 haneli olması gerekmektedir.',
+
         ]);
 
         $cacheKey = 'reg_verification:'.$request->email;
@@ -245,13 +249,13 @@ class AuthController extends Controller
         // Add proper null checks
         if (!$pendingRegistration || !isset($pendingRegistration['verification_code'])) {
             return response()->json([
-                'message' => 'Verification session expired or invalid. Please register again.'
+                'message' => 'Doğrulama oturumu sona erdi veya geçersiz. Lütfen tekrar kayıt olun.'
             ], 422);
         }
 
         if ($request->code !== $pendingRegistration['verification_code']) {
             return response()->json([
-                'message' => 'Invalid verification code'
+                'message' => 'Geçersiz doğrulama kodu'
             ], 422);
         }
 
@@ -304,27 +308,36 @@ class AuthController extends Controller
     public function resendVerification(Request $request)
     {
 
-    $request->validate([
-        'email' => 'required|email',
-    ]);
+        $request->validate([
+            'email' => 'required|email',
+        ]);
 
-    $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+        $cacheKey = 'reg_verification:'.$request->email;
+        $pendingRegistration = Cache::get($cacheKey);
 
-    $cacheKey = 'reg_verification:' . $request->email;
+        // Check if pending registration exists
+        if (!$pendingRegistration) {
+            return response()->json([
+                'message' => 'Bekleyen kayıt bulunamadı. Lütfen tekrar kayıt olun.',
+            ], 422);
+        }
 
-    // Kullanıcı doğrulama verisi geçici olarak cache'e kaydedilir
-    Cache::put($cacheKey, [
-        'email' => $request->email,
-        'verification_code' => $verificationCode,
-        // Ek olarak username, password, community vs. de koyabilirsin
-    ], now()->addMinutes(15));
+        // Generate a new 6-digit verification code
+        $verificationCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
 
-    // Doğrulama e-postası gönder
-    Mail::to($request->email)->send(new VerificationEmail($verificationCode));
+        // Update the verification code in the existing data
+        $pendingRegistration['verification_code'] = $verificationCode;
+        $pendingRegistration['created_at'] = now();
 
-    return response()->json([
-        'message' => 'Doğrulama kodu e-posta adresinize gönderildi.',
-    ], 200);
+        // Store updated data back in cache
+        Cache::put($cacheKey, $pendingRegistration, now()->addMinutes(15));
+
+        // Send verification email
+        Mail::to($request->email)->send(new VerificationEmail($verificationCode));
+
+        return response()->json([
+            'message' => 'Doğrulama kodu e-postanıza tekrar gönderildi.',
+        ], 200);
     }
 
 }
