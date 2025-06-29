@@ -232,8 +232,7 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out successfully']);
     }
 
-    public function verifyRegistration(Request $request)
-    {
+    public function verifyRegistration(Request $request){
         $request->validate([
             'code' => 'required|digits:6',
             'email' => 'required|email',
@@ -305,8 +304,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function resendVerification(Request $request)
-    {
+    public function resendVerification(Request $request){
 
         $request->validate([
             'email' => 'required|email',
@@ -339,5 +337,148 @@ class AuthController extends Controller
             'message' => 'Doğrulama kodu e-postanıza tekrar gönderildi.',
         ], 200);
     }
+
+
+     public function requestPasswordReset(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        // Generate a 6-digit reset code
+        $resetCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Store reset data in cache (expires in 15 minutes)
+        $cacheKey = 'password_reset:'.$request->email;
+        Cache::put($cacheKey, [
+            'email' => $request->email,
+            'reset_code' => $resetCode,
+            'created_at' => now(),
+        ], now()->addMinutes(15));
+
+        // Send reset code via email
+        Mail::to($request->email)->send(new VerificationEmail($resetCode));
+
+        return response()->json([
+            'message' => 'Password reset code sent to your email.',
+        ], 200);
+    }
+
+
+        public function verifyResetCode(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'code' => 'required|digits:6',
+        ]);
+
+        $cacheKey = 'password_reset:'.$request->email;
+        $resetData = Cache::get($cacheKey);
+
+        // Check if reset data exists
+        if (!$resetData || !isset($resetData['reset_code'])) {
+            return response()->json([
+                'message' => 'Reset session expired or invalid. Please request a new code.',
+            ], 422);
+        }
+
+        // Verify the code
+        if ($request->code !== $resetData['reset_code']) {
+            return response()->json([
+                'message' => 'Invalid reset code.',
+            ], 422);
+        }
+
+        // Generate a temporary token for password reset
+        $resetToken = Str::random(60);
+        Cache::put('password_reset_token:'.$request->email, [
+            'email' => $request->email,
+            'token' => $resetToken,
+            'created_at' => now(),
+        ], now()->addMinutes(15));
+
+        // Clear the reset code from cache
+        Cache::forget($cacheKey);
+
+        return response()->json([
+            'message' => 'Code verified successfully.',
+            'reset_token' => $resetToken,
+        ], 200);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'newPassword' => 'required|min:6|confirmed',
+            'reset_token' => 'required|string',
+        ]);
+
+        $cacheKey = 'password_reset_token:'.$request->email;
+        $resetData = Cache::get($cacheKey);
+
+        // Check if reset token exists and is valid
+        if (!$resetData || $request->reset_token !== $resetData['token']) {
+            return response()->json([
+                'message' => 'Invalid or expired reset token.',
+            ], 422);
+        }
+
+        // Update the user's password
+        $user = User::where('email', $request->email)->first();
+        $user->update([
+            'password' => Hash::make($request->newPassword),
+        ]);
+
+        // Clear the reset token from cache
+        Cache::forget($cacheKey);
+
+        return response()->json([
+            'message' => 'Password reset successfully.',
+        ], 200);
+    }
+
+
+     public function resendResetCode(Request $request)
+    {
+        // Validate the email
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $cacheKey = 'password_reset:'.$request->email;
+        $resetData = Cache::get($cacheKey);
+
+        // Check if there is a pending reset request
+        if (!$resetData) {
+            return response()->json([
+                'message' => 'No pending reset request found. Please request a new code.',
+                'errors' => [
+                    'email' => ['No pending reset request found.'],
+                ],
+            ], 422);
+        }
+
+        // Generate a new 6-digit reset code
+        $resetCode = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Update the existing cache entry
+        $resetData['reset_code'] = $resetCode;
+        $resetData['created_at'] = now();
+
+        // Store updated data in cache (15-minute expiration)
+        Cache::put($cacheKey, $resetData, now()->addMinutes(15));
+
+        // Send the new reset code via email
+        Mail::to($request->email)->send(new VerificationEmail($resetCode));
+
+        return response()->json([
+            'message' => 'Password reset code resent to your email.',
+        ], 200);
+    }
+
+
 
 }
