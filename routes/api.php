@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\LikeController;
 
 
 /*
@@ -57,6 +58,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/getCommunities', [CommunityController::class, 'show']);
+
+
+    Route::post('/posts/{postId}/like', [LikeController::class, 'toggle']);
+    Route::get('/posts/{postId}/like-status', [LikeController::class, 'check']);
 
 
 
