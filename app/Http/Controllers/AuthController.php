@@ -343,6 +343,10 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email|exists:users,email',
+        ], [
+            'email.required' => 'E-posta alanı boş bırakılamaz.',
+            'email.email' => 'Geçerli bir e-posta adresi giriniz.',
+            'email.exists' => 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -362,7 +366,7 @@ class AuthController extends Controller
         Mail::to($request->email)->send(new VerificationEmail($resetCode));
 
         return response()->json([
-            'message' => 'Password reset code sent to your email.',
+            'message' => 'Şifre sıfırlama kodu e-postanıza gönderildi.',
         ], 200);
     }
 
@@ -372,6 +376,13 @@ class AuthController extends Controller
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'code' => 'required|digits:6',
+        ], [
+            'email.required' => 'E-posta alanı boş bırakılamaz.',
+            'email.email' => 'Geçerli bir e-posta adresi giriniz.',
+            'email.exists' => 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.',
+
+            'code.required' => 'Doğrulama kodu alanı zorunludur.',
+            'code.digits' => 'Doğrulama kodu 6 haneli olmalıdır.',
         ]);
 
         $cacheKey = 'password_reset:'.$request->email;
@@ -380,14 +391,14 @@ class AuthController extends Controller
         // Check if reset data exists
         if (!$resetData || !isset($resetData['reset_code'])) {
             return response()->json([
-                'message' => 'Reset session expired or invalid. Please request a new code.',
+                'message' => 'Oturum süresi doldu veya geçersiz. Lütfen yeni bir kod isteyin.',
             ], 422);
         }
 
         // Verify the code
         if ($request->code !== $resetData['reset_code']) {
             return response()->json([
-                'message' => 'Invalid reset code.',
+                'message' => 'Geçersiz sıfırlama kodu.',
             ], 422);
         }
 
@@ -403,7 +414,7 @@ class AuthController extends Controller
         Cache::forget($cacheKey);
 
         return response()->json([
-            'message' => 'Code verified successfully.',
+            'message' => 'Kod başarıyla doğrulandı.',
             'reset_token' => $resetToken,
         ], 200);
     }
@@ -414,6 +425,17 @@ class AuthController extends Controller
             'email' => 'required|email|exists:users,email',
             'newPassword' => 'required|min:6|confirmed',
             'reset_token' => 'required|string',
+        ], [
+            'email.required' => 'E-posta alanı boş bırakılamaz.',
+            'email.email' => 'Geçerli bir e-posta adresi giriniz.',
+            'email.exists' => 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.',
+
+            'newPassword.required' => 'Yeni şifre alanı zorunludur.',
+            'newPassword.min' => 'Yeni şifre en az 6 karakter olmalıdır.',
+            'newPassword.confirmed' => 'Yeni şifre ile şifre tekrarı uyuşmuyor.',
+
+            'reset_token.required' => 'Şifre sıfırlama anahtarı gereklidir.',
+            'reset_token.string' => 'Şifre sıfırlama anahtarı geçerli bir metin olmalıdır.',
         ]);
 
         $cacheKey = 'password_reset_token:'.$request->email;
@@ -422,7 +444,7 @@ class AuthController extends Controller
         // Check if reset token exists and is valid
         if (!$resetData || $request->reset_token !== $resetData['token']) {
             return response()->json([
-                'message' => 'Invalid or expired reset token.',
+                'message' => 'Geçersiz veya süresi dolmuş sıfırlama belirteci.',
             ], 422);
         }
 
@@ -436,16 +458,19 @@ class AuthController extends Controller
         Cache::forget($cacheKey);
 
         return response()->json([
-            'message' => 'Password reset successfully.',
+            'message' => 'Şifre başarıyla sıfırlandı.',
         ], 200);
     }
 
 
      public function resendResetCode(Request $request)
     {
-        // Validate the email
         $request->validate([
             'email' => 'required|email|exists:users,email',
+        ], [
+            'email.required' => 'E-posta alanı boş bırakılamaz.',
+            'email.email' => 'Geçerli bir e-posta adresi giriniz.',
+            'email.exists' => 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.',
         ]);
 
         $cacheKey = 'password_reset:'.$request->email;
@@ -454,9 +479,9 @@ class AuthController extends Controller
         // Check if there is a pending reset request
         if (!$resetData) {
             return response()->json([
-                'message' => 'No pending reset request found. Please request a new code.',
+                'message' => 'Bekleyen sıfırlama isteği bulunamadı. Lütfen yeni bir kod isteyin.',
                 'errors' => [
-                    'email' => ['No pending reset request found.'],
+                    'email' => ['Bekleyen sıfırlama isteği bulunamadı.'],
                 ],
             ], 422);
         }
@@ -475,7 +500,7 @@ class AuthController extends Controller
         Mail::to($request->email)->send(new VerificationEmail($resetCode));
 
         return response()->json([
-            'message' => 'Password reset code resent to your email.',
+            'message' => 'Şifre sıfırlama kodu e-postanıza tekrar gönderilecektir.',
         ], 200);
     }
 
