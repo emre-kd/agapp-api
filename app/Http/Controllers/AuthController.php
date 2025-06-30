@@ -76,9 +76,34 @@ class AuthController extends Controller
             'name' => 'required|string|max:20',
             'email' => 'required|string|max:50|unique:users,email,' . $user->id,
             'username' => 'required|string|max:20|unique:users,username,' . $user->id,
-            'password' => 'nullable|string|min:8',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'coverImage' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:4096',
+            'password' => 'nullable|string|min:6',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+            'coverImage' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10000',
+        ], [
+            'name.required' => 'İsim alanı zorunludur.',
+            'name.string' => 'İsim metin olmalıdır.',
+            'name.max' => 'İsim en fazla 20 karakter olabilir.',
+
+            'email.required' => 'Email alanı zorunludur.',
+            'email.string' => 'Email metin olmalıdır.',
+            'email.max' => 'Email en fazla 50 karakter olabilir.',
+            'email.unique' => 'Bu email zaten kullanılıyor.',
+
+            'username.required' => 'Kullanıcı adı zorunludur.',
+            'username.string' => 'Kullanıcı adı metin olmalıdır.',
+            'username.max' => 'Kullanıcı adı en fazla 20 karakter olabilir.',
+            'username.unique' => 'Bu kullanıcı adı zaten alınmış.',
+
+            'password.string' => 'Şifre metin olmalıdır.',
+            'password.min' => 'Şifre en az 6 karakter olmalıdır.',
+
+            'image.image' => 'Dosya bir resim olmalıdır.',
+            'image.mimes' => 'Profil resmi formatı jpeg, png, jpg, gif veya svg olmalıdır.',
+            'image.max' => 'Profil resmi en fazla 10MB olabilir.',
+
+            'coverImage.image' => 'Kapak resmi bir resim olmalıdır.',
+            'coverImage.mimes' => 'Kapak resmi formatı jpeg, png, jpg, gif veya svg olmalıdır.',
+            'coverImage.max' => 'Kapak resmi dosyası en fazla 10MB olabilir.',
         ]);
 
         if ($validator->fails()) {
