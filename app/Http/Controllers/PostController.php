@@ -31,6 +31,7 @@ class PostController extends Controller
         // Fetch paginated posts
         $posts = Post::with('user')
             ->where('community_id', $user->community_id)
+            ->withCount('comments')
             ->orderBy('created_at', 'desc')
             ->paginate($limit, ['*'], 'page', $page)
             ->map(function ($post) {
@@ -39,6 +40,7 @@ class PostController extends Controller
                     'text' => $post->text,
                     'media' => $post->media,
                     'created_at' => $post->created_at->diffForHumans(),
+                    'comments_count' => $post->comments_count,
                     'user' => [
                         'username' => '@' . $post->user->username,
                         'id' => $post->user->id,

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Post>
  */
-class LikeFactory extends Factory
+class CommentFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -22,8 +22,9 @@ class LikeFactory extends Factory
         'post_id' => \App\Models\Post::factory(),
         'created_at' => now(),
         */
-        'user_id' => 21,
-        'post_id' => \App\Models\Post::inRandomOrder()->value('id'),
+       'user_id' => \App\Models\User::where('community_id', 1)->inRandomOrder()->value('id'),
+        'post_id' => \App\Models\Post::where('community_id', 1)->inRandomOrder()->value('id'),
+        'comment' => $this->faker->sentence,
         'created_at' => now(),
     ];
     }

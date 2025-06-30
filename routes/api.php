@@ -9,6 +9,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\CommentController;
 
 
 /*
@@ -62,6 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/posts/{postId}/like', [LikeController::class, 'toggle']);
     Route::get('/posts/{postId}/like-status', [LikeController::class, 'check']);
+
+    Route::get('posts/{postId}/comments', [CommentController::class, 'index']);
+    Route::post('comments', [CommentController::class, 'store']);
+    Route::delete('comments/{id}', [CommentController::class, 'destroy']);
 
 
 
