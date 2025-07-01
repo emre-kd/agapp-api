@@ -136,11 +136,21 @@ class PostController extends Controller
             return response()->json(['error' => 'Unauthenticated'], 401);
         }
 
-        $validator = Validator::make($request->all(), [
+       $validator = Validator::make($request->all(), [
             'text' => 'required_without:media|nullable|string|max:250',
             'media' => 'required_without:text|nullable|file|mimes:jpeg,png,jpg,gif,svg,mp4,mov|max:10240',
-        ]);
+        ], [
+            // text alanı için
+            'text.required_without' => 'Medya yoksa metin alanı zorunludur.',
+            'text.string' => 'Metin sadece yazı içermelidir.',
+            'text.max' => 'Metin en fazla 250 karakter olabilir.',
 
+            // media alanı için
+            'media.required_without' => 'Metin yoksa medya yüklemeniz gerekmektedir.',
+            'media.file' => 'Yüklenen dosya geçerli bir dosya olmalıdır.',
+            'media.mimes' => 'Yalnızca jpeg, png, jpg, gif, svg, mp4 ve mov formatları desteklenmektedir.',
+            'media.max' => 'Medya en fazla 10 MB boyutunda olabilir.',
+        ]);
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }

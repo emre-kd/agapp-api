@@ -363,9 +363,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-
-     public function requestPasswordReset(Request $request)
-    {
+    public function requestPasswordReset(Request $request){
         $request->validate([
             'email' => 'required|email|exists:users,email',
         ], [
@@ -396,56 +394,55 @@ class AuthController extends Controller
     }
 
 
-        public function verifyResetCode(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-            'code' => 'required|digits:6',
-        ], [
-            'email.required' => 'E-posta alanı boş bırakılamaz.',
-            'email.email' => 'Geçerli bir e-posta adresi giriniz.',
-            'email.exists' => 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.',
+    public function verifyResetCode(Request $request){
 
-            'code.required' => 'Doğrulama kodu alanı zorunludur.',
-            'code.digits' => 'Doğrulama kodu 6 haneli olmalıdır.',
-        ]);
+            $request->validate([
+                'email' => 'required|email|exists:users,email',
+                'code' => 'required|digits:6',
+            ], [
+                'email.required' => 'E-posta alanı boş bırakılamaz.',
+                'email.email' => 'Geçerli bir e-posta adresi giriniz.',
+                'email.exists' => 'Bu e-posta adresi ile kayıtlı bir kullanıcı bulunamadı.',
 
-        $cacheKey = 'password_reset:'.$request->email;
-        $resetData = Cache::get($cacheKey);
+                'code.required' => 'Doğrulama kodu alanı zorunludur.',
+                'code.digits' => 'Doğrulama kodu 6 haneli olmalıdır.',
+            ]);
 
-        // Check if reset data exists
-        if (!$resetData || !isset($resetData['reset_code'])) {
+            $cacheKey = 'password_reset:'.$request->email;
+            $resetData = Cache::get($cacheKey);
+
+            // Check if reset data exists
+            if (!$resetData || !isset($resetData['reset_code'])) {
+                return response()->json([
+                    'message' => 'Oturum süresi doldu veya geçersiz. Lütfen yeni bir kod isteyin.',
+                ], 422);
+            }
+
+            // Verify the code
+            if ($request->code !== $resetData['reset_code']) {
+                return response()->json([
+                    'message' => 'Geçersiz sıfırlama kodu.',
+                ], 422);
+            }
+
+            // Generate a temporary token for password reset
+            $resetToken = Str::random(60);
+            Cache::put('password_reset_token:'.$request->email, [
+                'email' => $request->email,
+                'token' => $resetToken,
+                'created_at' => now(),
+            ], now()->addMinutes(15));
+
+            // Clear the reset code from cache
+            Cache::forget($cacheKey);
+
             return response()->json([
-                'message' => 'Oturum süresi doldu veya geçersiz. Lütfen yeni bir kod isteyin.',
-            ], 422);
-        }
-
-        // Verify the code
-        if ($request->code !== $resetData['reset_code']) {
-            return response()->json([
-                'message' => 'Geçersiz sıfırlama kodu.',
-            ], 422);
-        }
-
-        // Generate a temporary token for password reset
-        $resetToken = Str::random(60);
-        Cache::put('password_reset_token:'.$request->email, [
-            'email' => $request->email,
-            'token' => $resetToken,
-            'created_at' => now(),
-        ], now()->addMinutes(15));
-
-        // Clear the reset code from cache
-        Cache::forget($cacheKey);
-
-        return response()->json([
-            'message' => 'Kod başarıyla doğrulandı.',
-            'reset_token' => $resetToken,
-        ], 200);
+                'message' => 'Kod başarıyla doğrulandı.',
+                'reset_token' => $resetToken,
+            ], 200);
     }
 
-    public function resetPassword(Request $request)
-    {
+    public function resetPassword(Request $request){
         $request->validate([
             'email' => 'required|email|exists:users,email',
             'newPassword' => 'required|min:6|confirmed',
@@ -487,9 +484,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-
-     public function resendResetCode(Request $request)
-    {
+    public function resendResetCode(Request $request){
         $request->validate([
             'email' => 'required|email|exists:users,email',
         ], [

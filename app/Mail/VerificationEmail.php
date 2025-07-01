@@ -19,7 +19,7 @@ class VerificationEmail extends Mailable
 
     public function build()
     {
-        return $this->subject('Email Verification Code')
+        return $this->subject('E-Posta Doğrulama Kodu')
                     ->view('emails.verification') // Make sure this matches your template file
                     ->with([
                         'code' => $this->verificationCode

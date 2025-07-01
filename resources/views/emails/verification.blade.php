@@ -1,47 +1,70 @@
 <!-- resources/views/emails/verification.blade.php -->
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-    <title>Email Verification</title>
+    <meta charset="UTF-8">
+    <title>E-posta Doğrulama</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
             color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
             max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
         }
         .code {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
+            letter-spacing: 4px;
             text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-            display: inline-block;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #2d3436;
+            border-radius: 6px;
+            margin: 30px auto;
+            width: fit-content;
+        }
+        p {
+            font-size: 16px;
+            margin: 10px 0;
         }
         .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
             font-size: 12px;
-            color: #777;
+            color: #888;
+            text-align: center;
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h2>Email Verification</h2>
-    <p>Your verification code is:</p>
+    <div class="container">
+        <h2>E-posta Doğrulama</h2>
 
-    <div class="code">{{ $code }}</div>
+        <p>Aşağıdaki doğrulama kodunu uygulamaya girerek e-posta adresinizi onaylayabilirsiniz:</p>
 
-    <p>This code will expire in 15 minutes.</p>
+        <div class="code">{{ $code }}</div>
 
-    <div class="footer">
-        <p>If you didn't request this code, please ignore this email.</p>
-        <p>© {{ date('Y') }} {{ config('app.name') }}</p>
+        <p>Bu kod <strong>15 dakika</span> içinde geçerliliğini yitirecektir.</p>
+
+        <div class="footer">
+            <p>Eğer bu işlemi siz gerçekleştirmediyseniz bu e-postayı göz ardı edebilirsiniz.</p>
+            <p>© {{ date('Y') }} {{ config('app.name') }}</p>
+        </div>
     </div>
 </body>
 </html>
