@@ -22,7 +22,7 @@ class LikeFactory extends Factory
         'post_id' => \App\Models\Post::factory(),
         'created_at' => now(),
         */
-        'user_id' => 21,
+        'user_id' => 24,
         'post_id' => \App\Models\Post::inRandomOrder()->value('id'),
         'created_at' => now(),
     ];

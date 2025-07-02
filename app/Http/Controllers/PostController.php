@@ -53,6 +53,87 @@ class PostController extends Controller
         return response()->json(['posts' => $posts], 200);
     }
 
+    public function mostLiked(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        // Get page and limit from query parameters (default to 1 and 5)
+        $page = $request->query('page', 1);
+        $limit = $request->query('limit', 5);
+
+        // Fetch paginated posts ordered by likes count
+        $posts = Post::with('user')
+            ->where('community_id', $user->community_id)
+            ->withCount('likes') // Adds likes_count column
+            ->withCount('comments')
+            ->orderBy('likes_count', 'desc') // Order by number of likes
+            ->orderBy('created_at', 'desc') // Secondary sort by creation date
+            ->paginate($limit, ['*'], 'page', $page)
+            ->map(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'text' => $post->text,
+                    'media' => $post->media,
+                    'created_at' => $post->created_at->diffForHumans(),
+                    'likes_count' => $post->likes_count, // Include likes count
+                    'comments_count' => $post->comments_count, // Include comments count
+
+                    'user' => [
+                        'username' => '@' . $post->user->username,
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'image' => $post->user->image,
+                    ],
+                ];
+            });
+
+        return response()->json(['posts' => $posts], 200);
+    }
+
+
+
+    public function mostCommented(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        // Get page and limit from query parameters (default to 1 and 5)
+        $page = $request->query('page', 1);
+        $limit = $request->query('limit', 5);
+
+        // Fetch paginated posts ordered by comments count
+        $posts = Post::with('user')
+            ->where('community_id', $user->community_id)
+            ->withCount('comments') // Adds comments_count column
+            ->orderBy('comments_count', 'desc') // Order by number of comments
+            ->orderBy('created_at', 'desc') // Secondary sort by creation date
+            ->paginate($limit, ['*'], 'page', $page)
+            ->map(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'text' => $post->text,
+                    'media' => $post->media,
+                    'created_at' => $post->created_at->diffForHumans(),
+                    'comments_count' => $post->comments_count, // Include comments count
+                    'user' => [
+                        'username' => '@' . $post->user->username,
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'image' => $post->user->image,
+                    ],
+                ];
+            });
+
+        return response()->json(['posts' => $posts], 200);
+    }
+
      public function getSearchedUserPosts(Request $request ,$userId)
     {
         $user = Auth::user();
@@ -128,8 +209,7 @@ class PostController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
-    {
+    public function store(Request $request){
         $user = Auth::user();
 
         if (!$user) {
