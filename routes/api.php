@@ -69,10 +69,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('comments/{id}', [CommentController::class, 'destroy']);
 
 
-     Route::get('/posts/most-liked', [PostController::class, 'mostLiked']);
+    Route::get('/posts/most-liked', [PostController::class, 'mostLiked']);
     Route::get('/posts/most-commented', [PostController::class, 'mostCommented']);
 
 
+    Route::get('/user/liked-posts', [PostController::class, 'getLikedPosts']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });

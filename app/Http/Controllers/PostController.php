@@ -53,8 +53,7 @@ class PostController extends Controller
         return response()->json(['posts' => $posts], 200);
     }
 
-    public function mostLiked(Request $request)
-    {
+    public function mostLiked(Request $request){
         $user = Auth::user();
 
         if (!$user) {
@@ -96,8 +95,7 @@ class PostController extends Controller
 
 
 
-    public function mostCommented(Request $request)
-    {
+    public function mostCommented(Request $request){
         $user = Auth::user();
 
         if (!$user) {
@@ -132,6 +130,37 @@ class PostController extends Controller
             });
 
         return response()->json(['posts' => $posts], 200);
+    }
+
+    public function getLikedPosts() {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $likedPosts = $user->likedPosts()
+            ->with('user') // Eager load the user who created the post
+            ->orderBy('likes.created_at', 'desc')
+            ->withCount('comments')
+            ->paginate(5)
+            ->map(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'text' => $post->text,
+                    'media' => $post->media,
+                    'created_at' => $post->created_at->diffForHumans(),
+                    'comments_count' => $post->comments_count,
+                    'user' => [
+                        'username' => '@' . $post->user->username,
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'image' => $post->user->image,
+                    ],
+                ];
+            });
+
+        return response()->json(['posts' => $likedPosts], 200);
     }
 
      public function getSearchedUserPosts(Request $request ,$userId)
@@ -169,8 +198,7 @@ class PostController extends Controller
     }
 
 
-    public function indexUser(Request $request)
-    {
+    public function indexUser(Request $request){
         $user = Auth::user();
 
         if (!$user) {
@@ -184,6 +212,7 @@ class PostController extends Controller
             ->where('user_id', $user->id)
             ->where('community_id', $user->community_id)
             ->orderBy('created_at', 'desc')
+            ->withCount('comments')
             ->paginate($limit, ['*'], 'page', $page)
             ->map(function ($post) {
                 return [
@@ -191,6 +220,7 @@ class PostController extends Controller
                     'text' => $post->text,
                     'media' => $post->media,
                     'created_at' => $post->created_at->diffForHumans(),
+                    'comments_count' => $post->comments_count,
                     'user' => [
                         'username' => '@' . $post->user->username,
                         'id' => $post->user->id,
