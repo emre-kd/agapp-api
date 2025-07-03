@@ -70,15 +70,13 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function comments()
     {
-        return $this->hasMany(Comment::class, 'user_id', 'id');
+    return $this->hasMany(Comment::class, 'user_id');
     }
 
     public function likes()
     {
         return $this->hasMany(Like::class, 'user_id', 'id');
     }
-
-
 
     public function likedPosts()
     {

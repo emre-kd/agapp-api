@@ -22,7 +22,7 @@ class CommentFactory extends Factory
         'post_id' => \App\Models\Post::factory(),
         'created_at' => now(),
         */
-       'user_id' => \App\Models\User::where('community_id', 1)->inRandomOrder()->value('id'),
+       'user_id' => 21,
         'post_id' => \App\Models\Post::where('community_id', 1)->inRandomOrder()->value('id'),
         'comment' => $this->faker->sentence,
         'created_at' => now(),

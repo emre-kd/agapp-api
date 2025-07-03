@@ -11,11 +11,10 @@ use App\Models\Comment;
 class CommentController extends Controller
 {
     // Get paginated comments for a post
-    public function index(Request $request, $postId)
-    {
+    public function index(Request $request, $postId) {
         $perPage = $request->query('per_page', 10); // Default to 10 comments per page
         $comments = Comment::where('post_id', $postId)
-            ->with('user') // Eager load user data
+            ->with(['post.user', 'user'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -34,8 +33,7 @@ class CommentController extends Controller
     }
 
     // Store a new comment
-    public function store(Request $request)
-    {
+    public function store(Request $request){
         $request->validate([
             'post_id' => 'required|exists:posts,id',
             'comment' => 'required|string|max:1000',
@@ -48,7 +46,7 @@ class CommentController extends Controller
         ]);
 
         // Load user data for the response
-        $comment->load('user');
+        $comment->load(['post.user', 'user']);
 
         return response()->json([
             'success' => true,
@@ -57,7 +55,55 @@ class CommentController extends Controller
         ], 201);
     }
 
-    // Delete a comment (optional, if needed)
+    public function getUserComments()
+        {
+            $user = Auth::user();
+
+            if (!$user) {
+                return response()->json(['error' => 'Unauthenticated'], 401);
+            }
+
+            $comments = $user->comments()
+                ->with(['post.user', 'user'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            // Transform each comment item
+        $transformedComments = $comments->getCollection()->map(function ($comment) {
+        return [
+            'id' => $comment->id,
+            'comment' => $comment->comment,
+            'post_id' => $comment->post_id,
+            'created_at' => $comment->created_at->toDateTimeString(),
+            'user' => [ // ✅ yorumun sahibini de gönderiyoruz
+                'name' => $comment->user->name,
+                'username' => '@' . $comment->user->username,
+                'image' => $comment->user->image,
+            ],
+            'post' => [
+                'id' => $comment->post->id,
+                'text' => $comment->post->text,
+                'created_at' => $comment->post->created_at->toDateTimeString(),
+                'media' => $comment->post->media,
+                'comments_count' => $comment->post->comments->count(),
+                'user' => [ // hala post sahibini de gönderiyoruz
+                    'username' => '@' . $comment->post->user->username,
+                    'name' => $comment->post->user->name,
+                    'image' => $comment->post->user->image,
+                ],
+            ],
+        ];
+    });
+
+
+        // Replace the original collection with the transformed one
+        $comments->setCollection($transformedComments);
+
+        return response()->json(['comments' => $comments], 200);
+    }
+
+
+    /*
     public function destroy($id)
     {
         $comment = Comment::where('user_id', Auth::id())->findOrFail($id);
@@ -68,4 +114,5 @@ class CommentController extends Controller
             'message' => 'Comment deleted successfully',
         ]);
     }
+    */
 }

@@ -93,8 +93,6 @@ class PostController extends Controller
         return response()->json(['posts' => $posts], 200);
     }
 
-
-
     public function mostCommented(Request $request){
         $user = Auth::user();
 
@@ -163,7 +161,8 @@ class PostController extends Controller
         return response()->json(['posts' => $likedPosts], 200);
     }
 
-     public function getSearchedUserPosts(Request $request ,$userId)
+
+    public function getSearchedUserPosts(Request $request ,$userId)
     {
         $user = Auth::user();
 
