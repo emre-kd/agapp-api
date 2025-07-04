@@ -162,6 +162,45 @@ class PostController extends Controller
     }
 
 
+    public function getSearchedUserLikedPosts(Request $request, $userId){
+        // Check if the authenticated user exists
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        // Find the user by userId
+        $user = User::find($userId);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        // Fetch liked posts for the specified user
+        $likedPosts = $user->likedPosts()
+            ->with('user') // Eager load the user who created the post
+            ->orderBy('likes.created_at', 'desc')
+            ->withCount('comments')
+            ->paginate(5)
+            ->map(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'text' => $post->text,
+                    'media' => $post->media,
+                    'created_at' => $post->created_at->diffForHumans(),
+                    'comments_count' => $post->comments_count,
+                    'user' => [
+                        'username' => '@' . $post->user->username,
+                        'id' => $post->user->id,
+                        'name' => $post->user->name,
+                        'image' => $post->user->image,
+                    ],
+                ];
+            });
+
+        return response()->json(['posts' => $likedPosts], 200);
+    }
+
+
     public function getSearchedUserPosts(Request $request ,$userId)
     {
         $user = Auth::user();

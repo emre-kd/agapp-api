@@ -77,5 +77,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/comments', [CommentController::class, 'getUserComments']);
 
 
+    Route::get('/user/{userId}/liked-posts', [PostController::class, 'getSearchedUserLikedPosts']);
+    Route::get('/user/{userId}/comments', [CommentController::class, 'getSearchedUserComments']);
+
     Route::post('/logout', [AuthController::class, 'logout']);
 });
